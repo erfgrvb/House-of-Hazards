@@ -1,49 +1,60 @@
 <!DOCTYPE html>
 <html lang="en-us">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity WebGL Player | House of Hazards</title>
     <script src="Build/UnityLoader.js"></script>
     <script>
-      // Simple UnityProgress function to handle loading progress
-      function UnityProgress(gameInstance, progress) {
-        if (!gameInstance.Module) return;
-        if (!gameInstance.logo) {
-          gameInstance.logo = document.createElement("div");
-          gameInstance.logo.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; background: url('https://webgl.unity3d.com/build/2019.3.10f1/TemplateData/progresslogo.png') no-repeat center / contain;";
-          gameInstance.container.appendChild(gameInstance.logo);
-        }
-        if (!gameInstance.progress) {
-          gameInstance.progress = document.createElement("div");
-          gameInstance.progress.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 20px; margin-top: 110px; background: #4A4A4A; border-radius: 10px; overflow: hidden;";
-          gameInstance.progressBar = document.createElement("div");
-          gameInstance.progressBar.style.cssText = "width: 0%; height: 100%; background: #F4F4F4; transition: width 0.3s;";
-          gameInstance.progress.appendChild(gameInstance.progressBar);
-          gameInstance.container.appendChild(gameInstance.progress);
-        }
-        gameInstance.progressBar.style.width = (progress * 100) + "%";
-        if (progress == 1) {
-          gameInstance.logo.style.display = "none";
-          gameInstance.progress.style.display = "none";
-        }
-      }
+        var unityInstance = UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json");
 
-      // Instantiate the Unity game with the progress callback
-      UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json", { onProgress: UnityProgress });
+        // Function to simulate the 'P' key press
+        function triggerPause() {
+            document.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }));
+        }
+
+        let lastPosition = null;
+
+        // Function to scan canvas and track color position
+        function trackColorMovement(targetColor = [96, 223, 69]) { // Example: Green Arrow
+            let canvas = document.querySelector("canvas");
+            if (!canvas) return;
+
+            let ctx = canvas.getContext("2d");
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            
+            let foundPosition = null;
+
+            for (let i = 0; i < imageData.length; i += 4) {
+                let r = imageData[i];
+                let g = imageData[i + 1];
+                let b = imageData[i + 2];
+
+                if (r === targetColor[0] && g === targetColor[1] && b === targetColor[2]) {
+                    let x = (i / 4) % canvas.width;
+                    let y = Math.floor((i / 4) / canvas.width);
+                    foundPosition = { x, y };
+                    break; // Stop at first match
+                }
+            }
+
+            if (foundPosition) {
+                if (lastPosition && (foundPosition.x !== lastPosition.x || foundPosition.y !== lastPosition.y)) {
+                    console.log("Target color moved! Pausing...");
+                    triggerPause();
+                }
+                lastPosition = foundPosition;
+            }
+
+            requestAnimationFrame(() => trackColorMovement(targetColor));
+        }
+
+        // Start monitoring after game loads
+        setTimeout(() => trackColorMovement([96, 223, 69]), 5000); // Adjust delay if needed
     </script>
-  </head>
-  <style>
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #5FDEE7; /* Background color from the JSON */
-    }
-  </style>
-  <body>
+</head>
+<style>html, body { width: 100%; height: 100%; }</style>
+<body style="margin: 0; padding: 0">
     <div id="unityContainer" style="width: 100%; height: 100%; margin: auto"></div>
-  </body>
+</body>
 </html>
