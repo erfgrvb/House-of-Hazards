@@ -1,16 +1,49 @@
-{
-"companyName": "New Eich Games",
-"productName": "House of Hazards",
-"productVersion": "0.1",
-"dataUrl": "HouseOfHazardsTwoPlayerGames.data.unityweb",
-"wasmCodeUrl": "HouseOfHazardsTwoPlayerGames.wasm.code.unityweb",
-"wasmFrameworkUrl": "HouseOfHazardsTwoPlayerGames.wasm.framework.unityweb",
-"graphicsAPI": ["WebGL 2.0","WebGL 1.0"],
-"webglContextAttributes": {"preserveDrawingBuffer": false},
-"splashScreenStyle": "Dark",
-"backgroundColor": "#5FDEE7",
-"cacheControl": {"default": "must-revalidate"},
-"developmentBuild": false,
-"multithreading": false,
-"unityVersion": "2019.3.10f1"
-}
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | House of Hazards</title>
+    <script src="Build/UnityLoader.js"></script>
+    <script>
+      // Simple UnityProgress function to handle loading progress
+      function UnityProgress(gameInstance, progress) {
+        if (!gameInstance.Module) return;
+        if (!gameInstance.logo) {
+          gameInstance.logo = document.createElement("div");
+          gameInstance.logo.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; background: url('https://webgl.unity3d.com/build/2019.3.10f1/TemplateData/progresslogo.png') no-repeat center / contain;";
+          gameInstance.container.appendChild(gameInstance.logo);
+        }
+        if (!gameInstance.progress) {
+          gameInstance.progress = document.createElement("div");
+          gameInstance.progress.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 20px; margin-top: 110px; background: #4A4A4A; border-radius: 10px; overflow: hidden;";
+          gameInstance.progressBar = document.createElement("div");
+          gameInstance.progressBar.style.cssText = "width: 0%; height: 100%; background: #F4F4F4; transition: width 0.3s;";
+          gameInstance.progress.appendChild(gameInstance.progressBar);
+          gameInstance.container.appendChild(gameInstance.progress);
+        }
+        gameInstance.progressBar.style.width = (progress * 100) + "%";
+        if (progress == 1) {
+          gameInstance.logo.style.display = "none";
+          gameInstance.progress.style.display = "none";
+        }
+      }
+
+      // Instantiate the Unity game with the progress callback
+      UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json", { onProgress: UnityProgress });
+    </script>
+  </head>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #5FDEE7; /* Background color from the JSON */
+    }
+  </style>
+  <body>
+    <div id="unityContainer" style="width: 100%; height: 100%; margin: auto"></div>
+  </body>
+</html>
