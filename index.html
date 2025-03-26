@@ -1,59 +1,115 @@
-var unityInstance = UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json");
-
-// Function to simulate the 'P' key press
-function triggerPause() {
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }));
-}
-
-let lastPosition = null;
-
-// Function to check if a color matches within a tolerance
-function isCloseToColor(r, g, b, target) {
-    return Math.abs(r - target[0]) < 10 && 
-           Math.abs(g - target[1]) < 10 && 
-           Math.abs(b - target[2]) < 10;
-}
-
-// Function to track color movement
-function trackColorMovement(targetColor = [96, 223, 69]) {
-    let canvas = document.querySelector("canvas");
-    if (!canvas) {
-        console.log("Canvas not found, retrying...");
-        setTimeout(() => trackColorMovement(targetColor), 1000); // Retry after 1 second
-        return;
-    }
-
-    let ctx = canvas.getContext("2d");
-    try {
-        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-        
-        let foundPosition = null;
-        for (let i = 0; i < imageData.length; i += 4) {
-            let r = imageData[i];
-            let g = imageData[i + 1];
-            let b = imageData[i + 2];
-
-            if (isCloseToColor(r, g, b, targetColor)) {
-                let x = (i / 4) % canvas.width;
-                let y = Math.floor((i / 4) / canvas.width);
-                foundPosition = { x, y };
-                break; // Stop at first match
-            }
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | House of Hazards</title>
+    <script src="Build/UnityLoader.js"></script>
+    <script>
+      // Simple UnityProgress function to handle loading progress
+      function UnityProgress(gameInstance, progress) {
+        if (!gameInstance.Module) return;
+        if (!gameInstance.logo) {
+          gameInstance.logo = document.createElement("div");
+          gameInstance.logo.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; background: url('https://webgl.unity3d.com/build/2019.3.10f1/TemplateData/progresslogo.png') no-repeat center / contain;";
+          gameInstance.container.appendChild(gameInstance.logo);
         }
-
-        if (foundPosition) {
-            if (lastPosition && (foundPosition.x !== lastPosition.x || foundPosition.y !== lastPosition.y)) {
-                console.log("Target color moved! Pausing...");
-                triggerPause();
-            }
-            lastPosition = foundPosition;
+        if (!gameInstance.progress) {
+          gameInstance.progress = document.createElement("div");
+          gameInstance.progress.style.cssText = "position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 200px; height: 20px; margin-top: 110px; background: #4A4A4A; border-radius: 10px; overflow: hidden;";
+          gameInstance.progressBar = document.createElement("div");
+          gameInstance.progressBar.style.cssText = "width: 0%; height: 100%; background: #F4F4F4; transition: width 0.3s;";
+          gameInstance.progress.appendChild(gameInstance.progressBar);
+          gameInstance.container.appendChild(gameInstance.progress);
         }
-    } catch (error) {
-        console.log("Error reading canvas, retrying...");
+        gameInstance.progressBar.style.width = (progress * 100) + "%";
+        if (progress == 1) {
+          gameInstance.logo.style.display = "none";
+          gameInstance.progress.style.display = "none";
+        }
+      }
+
+      // Instantiate the Unity game with the progress callback
+      var gameInstance = UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json", { onProgress: UnityProgress });
+
+      // Function to simulate pressing the "P" key to pause the game
+      function pauseGame() {
+        console.log("Simulating 'P' key press to pause the game...");
+        var event = new KeyboardEvent('keydown', {
+          key: 'p',
+          code: 'KeyP',
+          keyCode: 80,
+          which: 80,
+          bubbles: true
+        });
+        document.dispatchEvent(event);
+      }
+
+      // Monitor the DOM for changes that might indicate a task completion
+      function monitorTaskCompletion() {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            // Look for text changes in the DOM that might indicate a task completion
+            if (mutation.addedNodes.length) {
+              const addedText = Array.from(mutation.addedNodes)
+                .map(node => node.textContent)
+                .join(' ')
+                .toLowerCase();
+              if (addedText.includes("complete") || addedText.includes("task") || addedText.includes("done") || addedText.includes("finished") || addedText.includes("success")) {
+                console.log("Possible task completion detected in DOM:", addedText);
+                pauseGame();
+              }
+            }
+            if (mutation.type === "characterData") {
+              const changedText = mutation.target.textContent.toLowerCase();
+              if (changedText.includes("complete") || changedText.includes("task") || changedText.includes("done") || changedText.includes("finished") || changedText.includes("success")) {
+                console.log("Possible task completion detected in DOM text:", changedText);
+                pauseGame();
+              }
+            }
+          });
+        });
+
+        // Observe changes in the unityContainer and the entire document body
+        observer.observe(document.getElementById("unityContainer"), { childList: true, subtree: true, characterData: true });
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+        // Log when the observer starts
+        console.log("Started monitoring DOM for task completion...");
+      }
+
+      // Start monitoring after the game loads
+      setTimeout(monitorTaskCompletion, 5000); // Delay to ensure the game has loaded
+    </script>
+  </head>
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #5FDEE7; /* Background color from the JSON */
     }
-
-    requestAnimationFrame(() => trackColorMovement(targetColor));
-}
-
-// Start monitoring after Unity WebGL fully loads
-setTimeout(() => trackColorMovement([96, 223, 69]), 10000); // Wait 10 sec for Unity to initialize
+    #pauseButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background-color: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 1000;
+    }
+    #pauseButton:hover {
+      background-color: #cc0000;
+    }
+  </style>
+  <body>
+    <div id="unityContainer" style="width: 100%; height: 100%; margin: auto"></div>
+    <button id="pauseButton" onclick="pauseGame()">Pause Game</button>
+  </body>
+</html>
