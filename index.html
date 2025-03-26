@@ -1,60 +1,59 @@
-<!DOCTYPE html>
-<html lang="en-us">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | House of Hazards</title>
-    <script src="Build/UnityLoader.js"></script>
-    <script>
-        var unityInstance = UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json");
+var unityInstance = UnityLoader.instantiate("unityContainer", "Build/HouseOfHazardsTwoPlayerGames.json");
 
-        // Function to simulate the 'P' key press
-        function triggerPause() {
-            document.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }));
+// Function to simulate the 'P' key press
+function triggerPause() {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "p" }));
+}
+
+let lastPosition = null;
+
+// Function to check if a color matches within a tolerance
+function isCloseToColor(r, g, b, target) {
+    return Math.abs(r - target[0]) < 10 && 
+           Math.abs(g - target[1]) < 10 && 
+           Math.abs(b - target[2]) < 10;
+}
+
+// Function to track color movement
+function trackColorMovement(targetColor = [96, 223, 69]) {
+    let canvas = document.querySelector("canvas");
+    if (!canvas) {
+        console.log("Canvas not found, retrying...");
+        setTimeout(() => trackColorMovement(targetColor), 1000); // Retry after 1 second
+        return;
+    }
+
+    let ctx = canvas.getContext("2d");
+    try {
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        
+        let foundPosition = null;
+        for (let i = 0; i < imageData.length; i += 4) {
+            let r = imageData[i];
+            let g = imageData[i + 1];
+            let b = imageData[i + 2];
+
+            if (isCloseToColor(r, g, b, targetColor)) {
+                let x = (i / 4) % canvas.width;
+                let y = Math.floor((i / 4) / canvas.width);
+                foundPosition = { x, y };
+                break; // Stop at first match
+            }
         }
 
-        let lastPosition = null;
-
-        // Function to scan canvas and track color position
-        function trackColorMovement(targetColor = [96, 223, 69]) { // Example: Green Arrow
-            let canvas = document.querySelector("canvas");
-            if (!canvas) return;
-
-            let ctx = canvas.getContext("2d");
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            
-            let foundPosition = null;
-
-            for (let i = 0; i < imageData.length; i += 4) {
-                let r = imageData[i];
-                let g = imageData[i + 1];
-                let b = imageData[i + 2];
-
-                if (r === targetColor[0] && g === targetColor[1] && b === targetColor[2]) {
-                    let x = (i / 4) % canvas.width;
-                    let y = Math.floor((i / 4) / canvas.width);
-                    foundPosition = { x, y };
-                    break; // Stop at first match
-                }
+        if (foundPosition) {
+            if (lastPosition && (foundPosition.x !== lastPosition.x || foundPosition.y !== lastPosition.y)) {
+                console.log("Target color moved! Pausing...");
+                triggerPause();
             }
-
-            if (foundPosition) {
-                if (lastPosition && (foundPosition.x !== lastPosition.x || foundPosition.y !== lastPosition.y)) {
-                    console.log("Target color moved! Pausing...");
-                    triggerPause();
-                }
-                lastPosition = foundPosition;
-            }
-
-            requestAnimationFrame(() => trackColorMovement(targetColor));
+            lastPosition = foundPosition;
         }
+    } catch (error) {
+        console.log("Error reading canvas, retrying...");
+    }
 
-        // Start monitoring after game loads
-        setTimeout(() => trackColorMovement([96, 223, 69]), 5000); // Adjust delay if needed
-    </script>
-</head>
-<style>html, body { width: 100%; height: 100%; }</style>
-<body style="margin: 0; padding: 0">
-    <div id="unityContainer" style="width: 100%; height: 100%; margin: auto"></div>
-</body>
-</html>
+    requestAnimationFrame(() => trackColorMovement(targetColor));
+}
+
+// Start monitoring after Unity WebGL fully loads
+setTimeout(() => trackColorMovement([96, 223, 69]), 10000); // Wait 10 sec for Unity to initialize
